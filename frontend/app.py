@@ -7,10 +7,12 @@ import json
 import re
 import base64
 import unicodedata
+import io
 import google.generativeai as genai
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from PIL import Image
 
 # Sayfa yapılandırması (MUTLAK EN ÜSTTE OLMALI)
 st.set_page_config(
@@ -115,6 +117,27 @@ def _to_data_uri(uploaded_file):
     mime_type = uploaded_file.type or "image/jpeg"
     encoded = base64.b64encode(img_bytes).decode()
     return f"data:{mime_type};base64,{encoded}"
+
+def optimize_data_uri_for_zoom(image_src, max_size=1400, jpeg_quality=82):
+    """
+    Zoom bileşeni için görseli küçültüp sıkıştırır.
+    Efekti korurken Cloud'da beyaz ekran/freeze riskini azaltır.
+    """
+    if not image_src or not str(image_src).startswith("data:image/"):
+        return image_src
+    try:
+        header, b64_data = image_src.split(",", 1)
+        raw = base64.b64decode(b64_data)
+        img = Image.open(io.BytesIO(raw))
+        img = img.convert("RGB")
+        img.thumbnail((max_size, max_size))
+
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=jpeg_quality, optimize=True)
+        optimized_b64 = base64.b64encode(out.getvalue()).decode()
+        return f"data:image/jpeg;base64,{optimized_b64}"
+    except Exception:
+        return image_src
 
 def build_dynamic_plant_profile(ai_data, image_file=None):
     """Kütüphanede yoksa AI verisinden geçici bitki profili üretir."""
@@ -748,7 +771,7 @@ elif app_mode == "rehber":
         col_img, col_info, col_action = st.columns([1.2, 1.5, 1])
         with col_img:
             # Detay sayfasında profesyonel büyüteç (magnifier) efekti - KESİN ÇÖZÜM
-            img_base64 = get_image_base64(plant["image"])
+            img_base64 = optimize_data_uri_for_zoom(get_image_base64(plant["image"]))
             
             magnifier_html = f"""
             <style>
@@ -842,9 +865,12 @@ elif app_mode == "rehber":
                 }});
             </script>
             """
-            # Stabilite önceliği: interaktif JS büyüteç Cloud'da beyaz ekran üretebildiği için
-            # detay sayfasında her ortamda güvenli standart görsel kullanıyoruz.
-            st.image(img_base64, use_container_width=True)
+            # Zoom efekti korunur; render başarısızsa güvenli fallback devreye girer.
+            try:
+                import streamlit.components.v1 as components
+                components.html(magnifier_html, height=560)
+            except Exception:
+                st.image(img_base64, use_container_width=True)
             st.info(plant["summary"])
 
         with col_info:
