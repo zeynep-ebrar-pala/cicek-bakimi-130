@@ -739,6 +739,9 @@ elif app_mode == "rehber":
 
     elif st.session_state.view == "detail":
         plant = st.session_state.selected_plant
+        if not plant:
+            st.warning("Bitki detayı yüklenemedi, ana sayfaya dönülüyor.")
+            navigate_to("home")
         if st.button("← Geri", key="back_btn"): navigate_to("home")
         
         # 3 Kolonlu Profesyonel Yerleşim
@@ -839,8 +842,9 @@ elif app_mode == "rehber":
                 }});
             </script>
             """
-            import streamlit.components.v1 as components
-            components.html(magnifier_html, height=560)
+            # Stabilite önceliği: interaktif JS büyüteç Cloud'da beyaz ekran üretebildiği için
+            # detay sayfasında her ortamda güvenli standart görsel kullanıyoruz.
+            st.image(img_base64, use_container_width=True)
             st.info(plant["summary"])
 
         with col_info:
