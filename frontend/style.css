@@ -1,0 +1,308 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+/* --- GUARANTEED FLOWER GARLAND (SVG Data URI) --- */
+.flower-garland {
+    position: fixed;
+    top: -10px;
+    left: 0;
+    width: 100%;
+    height: 150px;
+    /* User'ın yüklediği çiçeğe benzeyen, 5 yapraklı, degrade geçişli profesyonel SVG */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(50,50)'%3E%3Cg opacity='0.9'%3E%3Cpath fill='%23FF8B71' d='M0,-25 Q15,-45 30,-25 Q45,-5 0,0 Q-45,-5 -30,-25 Q-15,-45 0,-25 Z' transform='rotate(0)'/%3E%3Cpath fill='%23FF8B71' d='M0,-25 Q15,-45 30,-25 Q45,-5 0,0 Q-45,-5 -30,-25 Q-15,-45 0,-25 Z' transform='rotate(72)'/%3E%3Cpath fill='%23FF8B71' d='M0,-25 Q15,-45 30,-25 Q45,-5 0,0 Q-45,-5 -30,-25 Q-15,-45 0,-25 Z' transform='rotate(144)'/%3E%3Cpath fill='%23FF8B71' d='M0,-25 Q15,-45 30,-25 Q45,-5 0,0 Q-45,-5 -30,-25 Q-15,-45 0,-25 Z' transform='rotate(216)'/%3E%3Cpath fill='%23FF8B71' d='M0,-25 Q15,-45 30,-25 Q45,-5 0,0 Q-45,-5 -30,-25 Q-15,-45 0,-25 Z' transform='rotate(288)'/%3E%3Ccircle fill='%23FFD700' r='6'/%3E%3Ccircle fill='white' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    background-size: 120px 120px;
+    z-index: 999999;
+    pointer-events: none;
+    animation: garlandSway 12s infinite ease-in-out;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+}
+
+@keyframes garlandSway {
+    0%, 100% { transform: translateY(0) rotate(0.3deg); }
+    50% { transform: translateY(8px) rotate(-0.3deg); }
+}
+
+.stApp {
+    background: 
+        linear-gradient(rgba(255, 250, 248, 0.94), rgba(255, 250, 248, 0.94)),
+        url('https://www.transparenttextures.com/patterns/linen-design.png'),
+        #FFF9F7 !important;
+}
+
+/* --- REFINED COLOR SYSTEM --- */
+:root {
+    --primary-color: #FF8B71;
+    --secondary-color: #FFB3A1;
+    --forest-green: #1B3022;
+    --mint-green: #E8F5E9;
+    --terracotta: #D35D47;
+    --glass-bg: rgba(255, 255, 255, 0.88);
+    --text-color: #2D1B1B;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Glassmorphism Cards */
+.plant-card, .management-card, .action-card {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 15px 35px rgba(74, 44, 42, 0.06) !important;
+    transition: all 0.4s ease !important;
+}
+
+.plant-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 45px rgba(255, 139, 113, 0.12) !important;
+    border-color: var(--primary-color) !important;
+}
+
+/* Seçim Rengi Düzeltmesi */
+::selection {
+    background: #FFD5CD !important;
+    color: #2D1B1B !important;
+}
+
+/* Premium Button Styling */
+div.stButton > button {
+    border-radius: 50px !important;
+    border: 1px solid var(--primary-color) !important;
+    padding: 10px 30px !important;
+    font-weight: 600 !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    background: white !important;
+    color: var(--text-color) !important;
+}
+
+div.stButton > button[kind="primary"] {
+    background: linear-gradient(90deg, var(--primary-color), #E67A63) !important;
+    color: white !important;
+    border: none !important;
+}
+
+div.stButton > button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(255, 139, 113, 0.2) !important;
+}
+
+/* Modül Kartları */
+.plant-card {
+    background: var(--card-bg);
+    border-radius: 35px;
+    padding: 25px;
+    border: 1px solid rgba(255, 139, 113, 0.1);
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.02);
+    transition: all 0.5s ease;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Progress Bars - Canlı ve Görünür Renkler */
+div[data-testid="stProgress"] > div > div > div > div {
+    background-color: var(--primary-color) !important;
+    background-image: linear-gradient(90deg, var(--secondary-color), var(--primary-color)) !important;
+}
+
+div[data-testid="stProgress"] [role="progressbar"] > div {
+    background-color: #FFE5DD !important; /* Boş kısım */
+}
+
+/* Divider Styling - No Blue Lines */
+hr {
+    border-top: 1px solid #A8D5BA !important;
+    opacity: 0.3;
+}
+
+.stDivider {
+    border-top: 1px solid #A8D5BA !important;
+}
+
+/* Bilgi Kutuları (st.info, st.success vb.) - Tamamen Temaya Uygun */
+div[data-testid="stNotification"] {
+    background-color: #FFF5F0 !important; /* Hafif şeftali arka plan */
+    border-left: 5px solid var(--primary-color) !important;
+    border-radius: 15px !important;
+    color: var(--text-color) !important;
+    box-shadow: 0 4px 15px rgba(255, 139, 113, 0.05) !important;
+}
+
+div[data-testid="stNotification"] svg {
+    fill: var(--primary-color) !important; /* İkon rengi mavi olmasın */
+}
+
+/* Input ve Selectbox Focus - Mavi Çerçeveyi Yok Et */
+div[data-baseweb="input"] > div, div[data-baseweb="select"] > div {
+    border-color: #FFE5DD !important;
+}
+
+div[data-baseweb="input"]:focus-within > div, div[data-baseweb="select"]:focus-within > div {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 1px var(--primary-color) !important;
+}
+
+/* Detay Sayfası Resim Kısıtlaması */
+.stImage > img {
+    max-height: 500px !important;
+    object-fit: cover !important;
+    border-radius: 30px !important;
+}
+
+/* Animasyonlar */
+@keyframes blink {
+    0% { background-color: white; color: var(--text-color); }
+    50% { background-color: var(--primary-color); color: white; border-color: white; }
+    100% { background-color: white; color: var(--text-color); }
+}
+
+/* Header ve Sidebar Gizleme - "Beyaz Bar" Tam Çözüm */
+header, [data-testid="stHeader"], [data-testid="stToolbar"] {
+    visibility: hidden !important;
+    display: none !important;
+    height: 0px !important;
+    padding: 0 !important;
+}
+
+[data-testid="stSidebar"], [data-testid="stSidebarNav"] {
+    display: none !important;
+}
+
+.main .block-container {
+    padding-top: 0rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Kart Tasarımı İyileştirme */
+.plant-card {
+    background: white;
+    border-radius: 25px;
+    padding: 15px;
+    border: 1px solid rgba(255, 139, 113, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+}
+
+.plant-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(255, 139, 113, 0.1);
+}
+
+.image-container {
+    width: 100%;
+    height: 220px;
+    overflow: hidden; /* Taşmaları gizleyerek zoom etkisini çerçeve içine hapseder */
+    border-radius: 20px;
+    margin-bottom: 10px;
+}
+
+.plant-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); /* Çok yumuşak bir zoom geçişi */
+}
+
+.plant-card:hover .plant-image {
+    transform: scale(1.2); /* Üzerine gelindiğinde %20 büyüt */
+}
+
+.plant-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+/* Link Renkleri */
+a {
+    color: var(--primary-color) !important;
+    text-decoration: none !important;
+}
+
+/* Action Card - Detay Sayfası Köşeme Ekle Kısmı */
+.action-card {
+    margin-top: 10px;
+    padding-bottom: 10px;
+}
+
+.action-card h3 {
+    color: var(--text-color);
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-weight: 700;
+}
+
+.action-instruction {
+    font-size: 0.9rem;
+    color: #886A68;
+    margin-bottom: 15px;
+    font-weight: 400;
+}
+
+/* AI Agent Terminal Styles */
+.terminal-container {
+    background: #1e1e1e;
+    color: #00ff00;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin-bottom: 20px;
+}
+
+.terminal-header {
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.terminal-cursor {
+    display: inline-block;
+    width: 10px;
+    height: 20px;
+    background: #00ff00;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+}
+
+/* Management Center UI */
+.management-card {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    border: 1px solid #f0f0f0;
+}
+
+.management-icon {
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+/* Agent Pulse Animation */
+@keyframes agentPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74, 44, 42, 0.4); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(74, 44, 42, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74, 44, 42, 0); }
+}
+
+.agent-active {
+    animation: agentPulse 2s infinite;
+}
+
+/* Animations */
+@keyframes slideInUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Markdown adjustments for terminal */
+.terminal-output {
+    line-height: 1.6;
+}
