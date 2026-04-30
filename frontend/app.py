@@ -577,7 +577,7 @@ if app_mode == "doktor":
             <h4>📸 Fotoğraf Yükle</h4>
             <p style='color: #666; font-size: 0.85rem;'>Sorunlu bölgenin net bir fotoğrafını çekin.</p>
         </div>""", unsafe_allow_html=True)
-        doc_file = st.file_uploader("", type=["jpg", "png", "jpeg"], key="doc_up", label_visibility="collapsed")
+        doc_file = st.file_uploader("Doktor fotoğraf yükleme", type=["jpg", "png", "jpeg"], key="doc_up", label_visibility="collapsed")
         
         st.markdown("#### 📝 Belirtileri Seçin")
         symptoms = st.multiselect(
@@ -708,10 +708,10 @@ elif app_mode == "rehber":
         st.divider()
 
         col_search, col_filter = st.columns([2, 1])
-        with col_search: search_query = st.text_input("", placeholder="Bitki ara...", label_visibility="collapsed")
+        with col_search: search_query = st.text_input("Bitki arama", placeholder="Bitki ara...", label_visibility="collapsed")
         with col_filter:
             categories = ["Tümü"] + sorted(list(set(p["category"] for p in PLANTS)))
-            selected_category = st.selectbox("", categories, label_visibility="collapsed")
+            selected_category = st.selectbox("Kategori filtresi", categories, label_visibility="collapsed")
 
         filtered_plants = [p for p in PLANTS if (search_query.lower() in p["name"].lower()) and (selected_category == "Tümü" or p["category"] == selected_category)]
         filtered_plants.sort(key=lambda x: x["name"])
