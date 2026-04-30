@@ -6,6 +6,7 @@ import os
 import json
 import re
 import base64
+import unicodedata
 import google.generativeai as genai
 import sys
 from pathlib import Path
@@ -95,6 +96,15 @@ def parse_ai_json_response(raw_text):
         if match:
             parsed[key] = (match.group(1) or match.group(2) or "").strip()
     return parsed
+
+def normalize_text(value):
+    if not value:
+        return ""
+    txt = str(value).lower().strip()
+    txt = "".join(ch for ch in unicodedata.normalize("NFKD", txt) if not unicodedata.combining(ch))
+    txt = re.sub(r"[^a-z0-9\s]", " ", txt)
+    txt = re.sub(r"\s+", " ", txt).strip()
+    return txt
 
 def _to_data_uri(uploaded_file):
     if not uploaded_file:
@@ -324,9 +334,9 @@ def identify_from_catalog_with_ai(image_file):
         catalog = "\n".join([f"- {p['name']} ({p['latin_name']})" for p in PLANTS])
         prompt = f"""
         Aşağıdaki görseldeki bitkiyi SADECE verilen katalogdan seç.
-        Emin değilsen UNKNOWN yaz.
-        Cevabı sadece JSON ver:
-        {{"best_match":"...", "latin_name":"...", "confidence":0-100}}
+        Cevapta tahmin uydurma. Emin değilsen UNKNOWN yaz.
+        SADECE tek satır JSON dön:
+        {{"best_match":"...", "latin_name":"...", "confidence":0-100, "reason":"kisa"}}
 
         Katalog:
         {catalog}
@@ -336,28 +346,150 @@ def identify_from_catalog_with_ai(image_file):
             prompt,
             {"mime_type": image_file.type, "data": img_bytes}
         ])
-        parsed = parse_ai_json_response(response.text)
-        best_match = (parsed.get("best_match") or parsed.get("plant_name") or "").strip().lower()
-        latin_name = (parsed.get("latin_name") or "").strip().lower()
+        raw_response = response.text or ""
+        parsed = parse_ai_json_response(raw_response)
+        best_match = normalize_text(parsed.get("best_match") or parsed.get("plant_name") or "")
+        latin_name = normalize_text(parsed.get("latin_name") or "")
+        confidence = parsed.get("confidence", 0)
+        try:
+            confidence = float(confidence)
+        except Exception:
+            # "87%" gibi cevapları da yakala
+            conf_match = re.search(r"(\d+(?:\.\d+)?)", str(confidence))
+            confidence = float(conf_match.group(1)) if conf_match else 0.0
 
+        # JSON parse başarısızsa ham metinden plant adı yakalamaya çalış
         if best_match in {"", "unknown", "none", "null"}:
+            normalized_raw = normalize_text(raw_response)
+            scored = []
+            for plant in PLANTS:
+                p_name = normalize_text(plant["name"])
+                p_latin = normalize_text(plant["latin_name"])
+                score = 0
+                if p_name and p_name in normalized_raw:
+                    score += 3
+                if p_latin and p_latin in normalized_raw:
+                    score += 4
+                for kw in plant.get("keywords", []):
+                    nkw = normalize_text(kw)
+                    if len(nkw) > 2 and nkw in normalized_raw:
+                        score += 1
+                if score > 0:
+                    scored.append((score, plant))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            if scored and scored[0][0] >= 3:
+                return scored[0][1]
             return None
 
         for plant in PLANTS:
-            p_name = plant["name"].lower()
-            p_latin = plant["latin_name"].lower()
+            p_name = normalize_text(plant["name"])
+            p_latin = normalize_text(plant["latin_name"])
             if best_match == p_name or (latin_name and latin_name == p_latin):
                 return plant
             if best_match in p_name or p_name in best_match:
-                return plant
+                # Düşük confidence olsa bile isim/latin net eşleşiyorsa kabul et
+                if confidence >= 35 or latin_name == p_latin:
+                    return plant
         return None
     except Exception:
         return None
+
+def identify_catalog_id_with_ai(image_file):
+    """
+    En güçlü sınıflandırma katmanı:
+    Modelden yalnızca katalogdaki bitki ID'sini döndürmesini ister.
+    """
+    if not configure_ai() or not image_file:
+        return None
+
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        image_file.seek(0)
+        img_bytes = image_file.read()
+        image_file.seek(0)
+
+        catalog_lines = []
+        for p in PLANTS:
+            catalog_lines.append(
+                f"{p['id']} | {p['name']} | {p['latin_name']} | {', '.join(p.get('keywords', [])[:6])}"
+            )
+        catalog_text = "\n".join(catalog_lines)
+
+        prompt = f"""
+        Gorev: Gorseldeki bitkiyi sadece bu katalogdan sec.
+        Cevap kurali: SADECE TEK SATIR ve sadece sayi.
+        - Katalogdaki ID'lerden birini yaz.
+        - Emin degilsen 0 yaz.
+
+        Katalog:
+        {catalog_text}
+        """
+
+        response = model.generate_content([
+            prompt,
+            {"mime_type": image_file.type, "data": img_bytes}
+        ])
+        raw = (response.text or "").strip()
+        id_match = re.search(r"\b(\d+)\b", raw)
+        if not id_match:
+            return None
+
+        predicted_id = int(id_match.group(1))
+        if predicted_id == 0:
+            return None
+
+        for plant in PLANTS:
+            try:
+                if int(plant["id"]) == predicted_id:
+                    return plant
+            except Exception:
+                continue
+        return None
+    except Exception:
+        return None
+
+def match_by_filename_hint(image_file):
+    """API başarısızsa dosya adından güvenli ipucu eşleşmesi yapar."""
+    if not image_file:
+        return None
+    filename = normalize_text(getattr(image_file, "name", ""))
+    if not filename:
+        return None
+
+    scored = []
+    for plant in PLANTS:
+        score = 0
+        p_name = normalize_text(plant["name"])
+        p_latin = normalize_text(plant["latin_name"])
+        if p_name and p_name in filename:
+            score += 4
+        if p_latin and p_latin in filename:
+            score += 5
+        for kw in plant.get("keywords", []):
+            nkw = normalize_text(kw)
+            if len(nkw) > 2 and nkw in filename:
+                score += 2
+        if score > 0:
+            scored.append((score, plant))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[0][1] if scored and scored[0][0] >= 3 else None
 
 def identify_plant(image_file, selected_traits):
     """Gelişmiş bitki tanımlama ve kütüphane eşleştirme mantığı."""
     ai_result_text = ""
     ai_parsed_data = {}
+
+    # 0. Aşama: Katalog içi hızlı sınıflandırma (ayırt etme başarısını artırır)
+    if st.session_state.api_key and image_file:
+        with st.spinner("🎯 Katalog içi kesin sınıflandırma yapılıyor..."):
+            forced_id_match = identify_catalog_id_with_ai(image_file)
+        if forced_id_match:
+            return forced_id_match
+
+        with st.spinner("🎯 Katalog içi ek sınıflandırma yapılıyor..."):
+            forced_match = identify_from_catalog_with_ai(image_file)
+        if forced_match:
+            return forced_match
     
     # 1. Aşama: Yapay Zeka Analizi
     if not st.session_state.api_key:
@@ -385,8 +517,8 @@ def identify_plant(image_file, selected_traits):
 
         for plant in PLANTS:
             score = 0
-            p_name = plant["name"].lower()
-            p_latin = plant["latin_name"].lower()
+            p_name = normalize_text(plant["name"])
+            p_latin = normalize_text(plant["latin_name"])
             
             # --- SEVİYE 0: KELİME BAZLI PARÇALAMA (Ultra Hassas) ---
             p_words = p_name.split()
@@ -400,13 +532,14 @@ def identify_plant(image_file, selected_traits):
             
             # --- SEVİYE 2: BULANIK (FUZZY) BENZERLİK ---
             if "name" in ai_parsed_data:
-                similarity = SequenceMatcher(None, p_name, ai_parsed_data["name"]).ratio()
+                similarity = SequenceMatcher(None, p_name, normalize_text(ai_parsed_data["name"])).ratio()
                 if similarity > 0.6: # Eşik 0.8'den 0.6'ya çekildi (Beyaz Orkide vs Orkide için)
                     score += (similarity * 200)
             
             # --- SEVİYE 3: ANAHTAR KELİMELER ---
             for kw in plant.get("keywords", []):
-                if kw.lower() in ai_result_text: score += 80
+                if normalize_text(kw) in normalize_text(ai_result_text):
+                    score += 80
             
             # --- SEVİYE 4: FALLBACK ---
             if filename and plant["image"].lower() in filename: score += 120
@@ -416,7 +549,7 @@ def identify_plant(image_file, selected_traits):
         
         scored_matches.sort(key=lambda x: x[0], reverse=True)
         
-        if scored_matches and scored_matches[0][0] >= 50:
+        if scored_matches and scored_matches[0][0] >= 30:
             return scored_matches[0][1]
         # Son güvenlik katmanı: katalogdan zorunlu AI seçimi
         catalog_match = identify_from_catalog_with_ai(image_file)
@@ -424,6 +557,9 @@ def identify_plant(image_file, selected_traits):
             return catalog_match
         if ai_parsed_data:
             return build_dynamic_plant_profile(ai_parsed_data, image_file)
+        filename_hint = match_by_filename_hint(image_file)
+        if filename_hint:
+            return filename_hint
         return None
 
 # --- MODÜL: BİTKİ DOKTORUM ---
