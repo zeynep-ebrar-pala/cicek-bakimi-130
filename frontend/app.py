@@ -30,9 +30,14 @@ sys.path.append(str(root_dir / "backend"))
 from data import PLANTS, DISEASES
 from utils import get_image_base64
 from database import init_db, add_to_garden, get_my_garden, update_care, add_log, get_logs, get_learned_knowledge
-from decorations import inject_garland
 from agent import BotanicaAgent
 from dev_layer import DevLayer
+
+# Hem `streamlit run frontend/app.py` hem de `streamlit run app.py` için uyumlu import
+try:
+    from frontend.decorations import inject_garland
+except Exception:
+    from decorations import inject_garland
 
 # Veritabanını başlat
 init_db()
@@ -302,6 +307,53 @@ def identify_plant_with_ai(image_file, user_complaint=""):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+def identify_from_catalog_with_ai(image_file):
+    """
+    İlk analiz belirsiz kaldığında, AI'dan sadece katalogdaki bitkiler arasından seçim yapmasını ister.
+    Böylece Orkide gibi var olan türlerin kaçırılma oranı düşer.
+    """
+    if not configure_ai() or not image_file:
+        return None
+
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        image_file.seek(0)
+        img_bytes = image_file.read()
+        image_file.seek(0)
+
+        catalog = "\n".join([f"- {p['name']} ({p['latin_name']})" for p in PLANTS])
+        prompt = f"""
+        Aşağıdaki görseldeki bitkiyi SADECE verilen katalogdan seç.
+        Emin değilsen UNKNOWN yaz.
+        Cevabı sadece JSON ver:
+        {{"best_match":"...", "latin_name":"...", "confidence":0-100}}
+
+        Katalog:
+        {catalog}
+        """
+
+        response = model.generate_content([
+            prompt,
+            {"mime_type": image_file.type, "data": img_bytes}
+        ])
+        parsed = parse_ai_json_response(response.text)
+        best_match = (parsed.get("best_match") or parsed.get("plant_name") or "").strip().lower()
+        latin_name = (parsed.get("latin_name") or "").strip().lower()
+
+        if best_match in {"", "unknown", "none", "null"}:
+            return None
+
+        for plant in PLANTS:
+            p_name = plant["name"].lower()
+            p_latin = plant["latin_name"].lower()
+            if best_match == p_name or (latin_name and latin_name == p_latin):
+                return plant
+            if best_match in p_name or p_name in best_match:
+                return plant
+        return None
+    except Exception:
+        return None
+
 def identify_plant(image_file, selected_traits):
     """Gelişmiş bitki tanımlama ve kütüphane eşleştirme mantığı."""
     ai_result_text = ""
@@ -366,6 +418,10 @@ def identify_plant(image_file, selected_traits):
         
         if scored_matches and scored_matches[0][0] >= 50:
             return scored_matches[0][1]
+        # Son güvenlik katmanı: katalogdan zorunlu AI seçimi
+        catalog_match = identify_from_catalog_with_ai(image_file)
+        if catalog_match:
+            return catalog_match
         if ai_parsed_data:
             return build_dynamic_plant_profile(ai_parsed_data, image_file)
         return None
