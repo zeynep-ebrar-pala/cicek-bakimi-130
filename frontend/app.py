@@ -25,6 +25,9 @@ except Exception:
     Image = None
     PIL_AVAILABLE = False
 
+# Teslim/stabilite modu: beyaz ekran riskini azaltmak için ağır dekoratif katmanlar kapalı.
+ENABLE_CUSTOM_THEME = False
+
 # Sayfa yapılandırması (MUTLAK EN ÜSTTE OLMALI)
 st.set_page_config(
     page_title="Ev Güzeli AI | Akıllı Bitki Bakımı",
@@ -62,15 +65,16 @@ except Exception as db_init_error:
     st.error(f"Veritabani baslatilamadi: {db_init_error}")
 
 # Çiçek Sarmaşığını Enjekte Et
-try:
-    inject_garland()
-except Exception:
-    # Dekoratif katman hata verirse uygulamanın ana akışını bozmasın.
-    pass
+if ENABLE_CUSTOM_THEME:
+    try:
+        inject_garland()
+    except Exception:
+        # Dekoratif katman hata verirse uygulamanın ana akışını bozmasın.
+        pass
 
 # CSS Yükleme
 css_path = Path(__file__).parent / "style.css"
-if css_path.exists():
+if ENABLE_CUSTOM_THEME and css_path.exists():
     try:
         with open(css_path, encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -335,14 +339,14 @@ has_ai_insight = len(ai_findings.get("data", [])) > 0
 
 # Dinamik CSS Injection
 blink_css = "<style>"
-if has_plant_alert:
+if ENABLE_CUSTOM_THEME and has_plant_alert:
     # Yeşil Köşem (2. Buton) ve Bildirimler (4. Buton)
     if st.session_state.app_mode != "kosem":
         blink_css += 'div[data-testid="stHorizontalBlock"] > div:nth-child(2) button { animation: blink 1.5s infinite ease-in-out !important; border: 1px solid #FF8B71 !important; }'
     if st.session_state.app_mode != "bildirim":
         blink_css += 'div[data-testid="stHorizontalBlock"] > div:nth-child(4) button { animation: blink 1.5s infinite ease-in-out !important; border: 1px solid #FF8B71 !important; }'
 
-if has_ai_insight and st.session_state.app_mode != "agent":
+if ENABLE_CUSTOM_THEME and has_ai_insight and st.session_state.app_mode != "agent":
     # Yönetim Merkezi (5. Buton)
     blink_css += 'div[data-testid="stHorizontalBlock"] > div:nth-child(5) button { animation: blink 1.5s infinite ease-in-out !important; border: 1px solid #FF8B71 !important; }'
 
@@ -850,108 +854,7 @@ elif app_mode == "rehber":
         with col_img:
             # Stabil mod default: beyaz ekran riskini azaltmak icin guvenli gorsel render.
             img_base64 = optimize_data_uri_for_zoom(get_image_base64(plant.get("image", "")))
-            
-            magnifier_html = f"""
-            <style>
-                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-                body {{ background: transparent; overflow: hidden; }}
-                .magnify-container {{
-                    position: relative;
-                    width: 100%;
-                    height: 550px;
-                    background: transparent;
-                    border-radius: 30px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    overflow: visible; /* Lensin dışarı taşmasına izin ver */
-                    cursor: none;
-                }}
-                .magnify-img {{
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: contain; /* Kesilmeyi önler */
-                    border-radius: 20px;
-                    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
-                }}
-                .magnifier-lens {{
-                    position: absolute;
-                    width: 180px;
-                    height: 180px;
-                    border: 4px solid #FF8B71;
-                    border-radius: 15px;
-                    background-repeat: no-repeat;
-                    visibility: hidden;
-                    pointer-events: none;
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-                    z-index: 999;
-                    background-color: #f0f0f0;
-                }}
-            </style>
-            <div class="magnify-container" id="container">
-                <img src="{img_base64}" class="magnify-img" id="main-img" onerror="this.src='https://via.placeholder.com/400'">
-                <div class="magnifier-lens" id="lens"></div>
-            </div>
-            <script>
-                const container = document.getElementById('container');
-                const img = document.getElementById('main-img');
-                const lens = document.getElementById('lens');
-                const zoom = 2.5;
-
-                function moveLens(e) {{
-                    lens.style.visibility = 'visible';
-                    const rect = container.getBoundingClientRect();
-                    const imgRect = img.getBoundingClientRect();
-
-                    let x = e.clientX - rect.left;
-                    let y = e.clientY - rect.top;
-
-                    // Lens Pozisyonu
-                    let lensX = x - lens.offsetWidth / 2;
-                    let lensY = y - lens.offsetHeight / 2;
-
-                    // Konteynır sınırları
-                    if (lensX < 0) lensX = 0;
-                    if (lensY < 0) lensY = 0;
-                    if (lensX > rect.width - lens.offsetWidth) lensX = rect.width - lens.offsetWidth;
-                    if (lensY > rect.height - lens.offsetHeight) lensY = rect.height - lens.offsetHeight;
-
-                    lens.style.left = lensX + 'px';
-                    lens.style.top = lensY + 'px';
-
-                    // ZOOM İŞLEMİ - Resmin kendi src'sini kullan
-                    lens.style.backgroundImage = "url('" + img.src + "')";
-                    
-                    // Hesaplama: Resmin görünür boyutlarına göre zoom ayarı
-                    lens.style.backgroundSize = (imgRect.width * zoom) + "px " + (imgRect.height * zoom) + "px";
-                    
-                    // Resmin merkezini lensin altına getir (ofsetleri hesaba katarak)
-                    let bgX = (x - imgRect.left + rect.left) * zoom - lens.offsetWidth / 2;
-                    let bgY = (y - imgRect.top + rect.top) * zoom - lens.offsetHeight / 2;
-
-                    lens.style.backgroundPosition = "-" + bgX + "px -" + bgY + "px";
-                }}
-
-                container.addEventListener('mousemove', moveLens);
-                container.addEventListener('touchstart', (e) => {{
-                    e.preventDefault();
-                    moveLens(e.touches[0]);
-                }}, {{passive: false}});
-                
-                container.addEventListener('mouseleave', () => {{
-                    lens.style.visibility = 'hidden';
-                }});
-            </script>
-            """
-            enable_zoom = st.toggle("🔎 Gelismis buyutec", value=False, key="detail_zoom_toggle")
-            if enable_zoom:
-                try:
-                    import streamlit.components.v1 as components
-                    components.html(magnifier_html, height=560)
-                except Exception:
-                    st.image(img_base64, use_container_width=True)
-            else:
-                st.image(img_base64, use_container_width=True)
+            st.image(img_base64, use_container_width=True)
             st.info(plant.get("summary", "Ozet bilgi bulunamadi."))
 
         with col_info:
