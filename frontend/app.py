@@ -8,11 +8,22 @@ import re
 import base64
 import unicodedata
 import io
-import google.generativeai as genai
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-from PIL import Image
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except Exception:
+    genai = None
+    GEMINI_AVAILABLE = False
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except Exception:
+    Image = None
+    PIL_AVAILABLE = False
 
 # Sayfa yapılandırması (MUTLAK EN ÜSTTE OLMALI)
 st.set_page_config(
@@ -43,15 +54,28 @@ except Exception:
     from decorations import inject_garland
 
 # Veritabanını başlat
-init_db()
+db_ready = True
+try:
+    init_db()
+except Exception as db_init_error:
+    db_ready = False
+    st.error(f"Veritabani baslatilamadi: {db_init_error}")
 
 # Çiçek Sarmaşığını Enjekte Et
-inject_garland()
+try:
+    inject_garland()
+except Exception:
+    # Dekoratif katman hata verirse uygulamanın ana akışını bozmasın.
+    pass
 
 # CSS Yükleme
 css_path = Path(__file__).parent / "style.css"
-with open(css_path, encoding="utf-8") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+if css_path.exists():
+    try:
+        with open(css_path, encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception:
+        pass
 
 # --- AI AYARLARI ---
 if "api_key" not in st.session_state:
@@ -60,6 +84,8 @@ if "groq_api_key" not in st.session_state:
     st.session_state.groq_api_key = os.getenv("GROQ_API_KEY") or ""
 
 def configure_ai():
+    if not GEMINI_AVAILABLE:
+        return False
     if st.session_state.api_key:
         try:
             genai.configure(api_key=st.session_state.api_key)
@@ -125,6 +151,8 @@ def optimize_data_uri_for_zoom(image_src, max_size=1400, jpeg_quality=82):
     """
     if not image_src or not str(image_src).startswith("data:image/"):
         return image_src
+    if not PIL_AVAILABLE:
+        return image_src
     try:
         header, b64_data = image_src.split(",", 1)
         raw = base64.b64decode(b64_data)
@@ -170,8 +198,8 @@ def render_hybrid_ai_panel(prefix, title_text):
         <div style='background: #E8F5E9; padding: 18px; border-radius: 16px; border-left: 6px solid #FF8B71; margin-bottom: 10px;'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <b style='color: #1B3022; font-size: 1.0rem;'>🧠 {title_text}</b>
-                <span style='background: {"#4CAF50" if st.session_state.api_key else "#FF9800"}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;'>
-                    {"SİSTEM AKTİF" if st.session_state.api_key else "YAPILANDIRMA BEKLENİYOR"}
+                <span style='background: {"#4CAF50" if st.session_state.api_key and GEMINI_AVAILABLE else "#FF9800"}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;'>
+                    {"SİSTEM AKTİF" if st.session_state.api_key and GEMINI_AVAILABLE else "YAPILANDIRMA BEKLENİYOR"}
                 </span>
             </div>
             <small style='color: #2D1B1B;'>
@@ -202,6 +230,8 @@ def render_hybrid_ai_panel(prefix, title_text):
         configure_ai()
         st.success("✅ Hibrit AI altyapısı güncellendi.")
         st.rerun()
+    if not GEMINI_AVAILABLE:
+        st.warning("`google-generativeai` paketi bulunamadi. AI ozellikleri pasif modda calisir.")
 
 # Başlangıçta konfigüre et
 configure_ai()
@@ -219,6 +249,28 @@ def navigate_to(view, plant=None):
     st.session_state.view = view
     st.session_state.selected_plant = plant
     st.rerun()
+
+def safe_get_my_garden():
+    if not db_ready:
+        return []
+    try:
+        return get_my_garden()
+    except Exception as e:
+        st.error(f"Bahce verilerine erisim hatasi: {e}")
+        return []
+
+def safe_date_from_value(value, fallback=None):
+    """DB tarih alanlarini guvenli okumak icin ortak helper."""
+    if fallback is None:
+        fallback = datetime.date.today()
+    if isinstance(value, datetime.date):
+        return value
+    if not value:
+        return fallback
+    try:
+        return datetime.date.fromisoformat(str(value))
+    except Exception:
+        return fallback
 
 # Ajan ve Dev Katmanı Başlatma
 if "agent" not in st.session_state:
@@ -242,11 +294,13 @@ st.markdown("<h1 style='text-align: center; color: #4A2C2A; margin-top: 0;'>🌸
 
 # Bildirim Kontrolü (Gelişmiş Blink Sistemi)
 has_plant_alert = False
-my_plants = get_my_garden()
+my_plants = []
+if db_ready:
+    my_plants = safe_get_my_garden()
 for p_row in my_plants:
     plant_data = next((p for p in PLANTS if p["id"] == p_row["plant_id"]), None)
     if plant_data:
-        last_w = datetime.date.fromisoformat(p_row["last_watered"])
+        last_w = safe_date_from_value(p_row["last_watered"])
         days_since = (datetime.date.today() - last_w).days
         water_period = 7 if plant_data["water_level"] == 2 else 14 if plant_data["water_level"] == 1 else 3
         if days_since >= water_period or p_row["is_sick"]:
@@ -254,7 +308,10 @@ for p_row in my_plants:
             break
 
 # AI Analiz Kontrolü
-ai_findings = st.session_state.agent.diagnose_plant_anomalies()
+try:
+    ai_findings = st.session_state.agent.diagnose_plant_anomalies() if db_ready else {"data": []}
+except Exception:
+    ai_findings = {"data": []}
 has_ai_insight = len(ai_findings.get("data", [])) > 0
 
 # Dinamik CSS Injection
@@ -312,6 +369,8 @@ app_mode = st.session_state.app_mode
 
 # --- GERÇEK AI MODÜLÜ (Gemini 1.5 Flash) ---
 def identify_plant_with_ai(image_file, user_complaint=""):
+    if not GEMINI_AVAILABLE:
+        return {"status": "error", "message": "AI kutuphanesi yuklu degil (`google-generativeai`)."}
     if not configure_ai():
         return {"status": "no_api", "message": "Lütfen ayarlardan API anahtarınızı girin."}
     
@@ -345,7 +404,7 @@ def identify_from_catalog_with_ai(image_file):
     İlk analiz belirsiz kaldığında, AI'dan sadece katalogdaki bitkiler arasından seçim yapmasını ister.
     Böylece Orkide gibi var olan türlerin kaçırılma oranı düşer.
     """
-    if not configure_ai() or not image_file:
+    if not GEMINI_AVAILABLE or not configure_ai() or not image_file:
         return None
 
     try:
@@ -422,7 +481,7 @@ def identify_catalog_id_with_ai(image_file):
     En güçlü sınıflandırma katmanı:
     Modelden yalnızca katalogdaki bitki ID'sini döndürmesini ister.
     """
-    if not configure_ai() or not image_file:
+    if not GEMINI_AVAILABLE or not configure_ai() or not image_file:
         return None
 
     try:
@@ -663,7 +722,7 @@ if app_mode == "doktor":
 # --- MODÜL: BİLDİRİMLER ---
 elif app_mode == "bildirim":
     st.markdown("# 🔔 Bildirim Merkezi")
-    my_plants = get_my_garden()
+    my_plants = safe_get_my_garden()
     if not my_plants:
         st.info("Yeşil köşenizde henüz bitki yok. Kütüphaneden bitki ekleyerek bildirimleri aktif edebilirsiniz.")
     else:
@@ -672,7 +731,7 @@ elif app_mode == "bildirim":
             plant_data = next((p for p in PLANTS if p["id"] == p_row["plant_id"]), None)
             if plant_data:
                 with cols[idx % 2]:
-                    last_w = datetime.date.fromisoformat(p_row["last_watered"])
+                    last_w = safe_date_from_value(p_row["last_watered"])
                     days_since = (datetime.date.today() - last_w).days
                     water_period = 7 if plant_data["water_level"] == 2 else 14 if plant_data["water_level"] == 1 else 3
                     
@@ -901,8 +960,11 @@ elif app_mode == "rehber":
             if plant.get("is_dynamic"):
                 st.info("Bu bitki AI ile yeni tespit edildiği için doğrudan kütüphane kaydı yok. Önce kütüphaneye eklenmesi gerekir.")
             elif st.button("Yeşil Köşeme Ekle ✨", type="primary", use_container_width=True, key="add_btn_final"):
-                add_to_garden(plant["id"], nickname)
-                st.success("✅ Eklendi!")
+                try:
+                    add_to_garden(plant["id"], nickname)
+                    st.success("✅ Eklendi!")
+                except Exception as e:
+                    st.error(f"Bitki eklenemedi: {e}")
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.caption("🔍 Bu bitkiyi kendi bahçenize ekleyerek sulama hatırlatıcılarını aktif edebilirsiniz.")
@@ -910,7 +972,7 @@ elif app_mode == "rehber":
 # --- MODÜL: YEŞİL KÖŞEM ---
 elif app_mode == "kosem":
     st.markdown("# 🪴 Yeşil Köşem")
-    my_garden = get_my_garden()
+    my_garden = safe_get_my_garden()
     
     if not my_garden:
         st.info("Yeşil köşeniz henüz boş. Kütüphaneden bitki ekleyerek burayı canlandırabilirsiniz!")
@@ -933,11 +995,17 @@ elif app_mode == "kosem":
                         # Butonlar - Hizalı ve İşlevsel
                         bc1, bc2, bc3 = st.columns(3)
                         if bc1.button("💧 Suladım", key=f"w_{p_row['id']}", use_container_width=True):
-                            update_care(p_row['id'], "water")
-                            st.rerun()
+                            try:
+                                update_care(p_row['id'], "water")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Sulama kaydi guncellenemedi: {e}")
                         if bc2.button("🧪 Gübreledim", key=f"f_{p_row['id']}", use_container_width=True):
-                            update_care(p_row['id'], "fertilize")
-                            st.rerun()
+                            try:
+                                update_care(p_row['id'], "fertilize")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gubreleme kaydi guncellenemedi: {e}")
                         if bc3.button("🩺 Doktoruma Sor", key=f"d_{p_row['id']}", use_container_width=True):
                             st.session_state.app_mode = "doktor"
                             st.rerun()
@@ -946,8 +1014,11 @@ elif app_mode == "kosem":
                         st.markdown("### 📝 Bitki Günlüğü")
                         note = st.text_input("Not ekle...", key=f"note_{p_row['id']}")
                         if st.button("Kaydet", key=f"save_{p_row['id']}"):
-                            add_log(p_row['id'], note)
-                            st.success("Not kaydedildi!")
+                            try:
+                                add_log(p_row['id'], note)
+                                st.success("Not kaydedildi!")
+                            except Exception as e:
+                                st.error(f"Not kaydedilemedi: {e}")
                         
                         logs = get_logs(p_row['id'])
                         for l in logs[:3]:

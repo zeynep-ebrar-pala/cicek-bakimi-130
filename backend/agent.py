@@ -14,6 +14,16 @@ class BotanicaAgent:
         Profesyonel, çözüm odaklı ve proaktif bir dil kullan.
         """
 
+    def _safe_date(self, value):
+        if isinstance(value, datetime.date):
+            return value
+        if not value:
+            return datetime.date.today()
+        try:
+            return datetime.date.fromisoformat(str(value))
+        except Exception:
+            return datetime.date.today()
+
     def process_command(self, user_input):
         """Kullanıcı komutunu işler."""
         user_input = user_input.lower()
@@ -42,7 +52,7 @@ class BotanicaAgent:
         
         for p in my_plants:
             plant_data = next((pd for pd in PLANTS if pd["id"] == p["plant_id"]), None)
-            last_w = datetime.date.fromisoformat(p["last_watered"])
+            last_w = self._safe_date(p["last_watered"])
             days_since = (datetime.date.today() - last_w).days
             
             status = "Sağlıklı" if not p["is_sick"] else "Tedavide"
@@ -76,7 +86,7 @@ class BotanicaAgent:
             if p["is_sick"]:
                 findings.append(f"{p['nickname']} bitkinizde devam eden bir hastalık var. 3. aşama tedavi modülünü başlatmamı ister misiniz?")
             
-            last_w = datetime.date.fromisoformat(p["last_watered"])
+            last_w = self._safe_date(p["last_watered"])
             if (datetime.date.today() - last_w).days > 10:
                 findings.append(f"{p['nickname']} uzun süredir sulanmamış. Bu durum kök çürümesine yol açabilir.")
 
