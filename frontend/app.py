@@ -272,6 +272,25 @@ def safe_date_from_value(value, fallback=None):
     except Exception:
         return fallback
 
+def normalize_plant_payload(plant):
+    """Detay ekrani icin eksik alanlari tamamlar."""
+    if not isinstance(plant, dict):
+        return None
+    normalized = dict(plant)
+    normalized.setdefault("name", "Bilinmeyen Bitki")
+    normalized.setdefault("latin_name", "Tur bilgisi yok")
+    normalized.setdefault("summary", "Bu bitki icin ozet bilgi bulunamadi.")
+    normalized.setdefault("light", "Standart aydinlik ortam.")
+    normalized.setdefault("light_level", 2)
+    normalized.setdefault("water", "Toprak yuzeyi kurudukca sulayin.")
+    normalized.setdefault("water_level", 2)
+    normalized.setdefault("soil", "Drenaji iyi standart karisim.")
+    normalized.setdefault("supplements", "Ayda bir dengeli gubre uygulanabilir.")
+    normalized.setdefault("placement", "Aydinlik bir kose.")
+    normalized.setdefault("watering_detail", "Toprak ustu kurudukca sulayin.")
+    normalized.setdefault("image", "")
+    return normalized
+
 # Ajan ve Dev Katmanı Başlatma
 if "agent" not in st.session_state:
     st.session_state.agent = BotanicaAgent()
@@ -820,7 +839,7 @@ elif app_mode == "rehber":
                         navigate_to("detail", plant)
 
     elif st.session_state.view == "detail":
-        plant = st.session_state.selected_plant
+        plant = normalize_plant_payload(st.session_state.selected_plant)
         if not plant:
             st.warning("Bitki detayı yüklenemedi, ana sayfaya dönülüyor.")
             navigate_to("home")
@@ -829,8 +848,8 @@ elif app_mode == "rehber":
         # 3 Kolonlu Profesyonel Yerleşim
         col_img, col_info, col_action = st.columns([1.2, 1.5, 1])
         with col_img:
-            # Detay sayfasında profesyonel büyüteç (magnifier) efekti - KESİN ÇÖZÜM
-            img_base64 = optimize_data_uri_for_zoom(get_image_base64(plant["image"]))
+            # Stabil mod default: beyaz ekran riskini azaltmak icin guvenli gorsel render.
+            img_base64 = optimize_data_uri_for_zoom(get_image_base64(plant.get("image", "")))
             
             magnifier_html = f"""
             <style>
@@ -924,13 +943,16 @@ elif app_mode == "rehber":
                 }});
             </script>
             """
-            # Zoom efekti korunur; render başarısızsa güvenli fallback devreye girer.
-            try:
-                import streamlit.components.v1 as components
-                components.html(magnifier_html, height=560)
-            except Exception:
+            enable_zoom = st.toggle("🔎 Gelismis buyutec", value=False, key="detail_zoom_toggle")
+            if enable_zoom:
+                try:
+                    import streamlit.components.v1 as components
+                    components.html(magnifier_html, height=560)
+                except Exception:
+                    st.image(img_base64, use_container_width=True)
+            else:
                 st.image(img_base64, use_container_width=True)
-            st.info(plant["summary"])
+            st.info(plant.get("summary", "Ozet bilgi bulunamadi."))
 
         with col_info:
             st.markdown(f"<h1>{plant['name']}</h1>", unsafe_allow_html=True)
@@ -938,9 +960,9 @@ elif app_mode == "rehber":
             
             st.markdown("#### 🌡️ Bakım Reçetesi")
             st.write(f"☀️ Işık: {plant['light']}")
-            st.progress(plant["light_level"] / 3.0)
+            st.progress(max(0.0, min(float(plant.get("light_level", 2)) / 3.0, 1.0)))
             st.write(f"💧 Su: {plant['water']}")
-            st.progress(plant["water_level"] / 3.0)
+            st.progress(max(0.0, min(float(plant.get("water_level", 2)) / 3.0, 1.0)))
             
             st.markdown(f"**🏠 Konumlandırma:** {plant.get('placement', 'Aydınlık bir köşe.')}")
             st.markdown(f"**🌊 Sulama Detayı:** {plant.get('watering_detail', 'Toprak kurudukça.')}")
