@@ -159,6 +159,10 @@ def cached_image_source(path):
             return str(candidate)
     return "https://via.placeholder.com/400x300?text=Resim+Yok"
 
+@st.cache_data(show_spinner=False)
+def get_plant_index():
+    return {str(p["id"]): p for p in PLANTS}
+
 def _to_data_uri(uploaded_file):
     if not uploaded_file:
         return ""
@@ -297,6 +301,21 @@ def safe_date_from_value(value, fallback=None):
     except Exception:
         return fallback
 
+def get_watering_period_days(plant_data):
+    level = int(plant_data.get("water_level", 2))
+    return 7 if level == 2 else 14 if level == 1 else 3
+
+def calculate_urgency_score(p_row, plant_data):
+    if not plant_data:
+        return 0
+    water_period = get_watering_period_days(plant_data)
+    last_w = safe_date_from_value(p_row.get("last_watered"))
+    days_since = (datetime.date.today() - last_w).days
+    score = max(0, days_since - water_period + 1)
+    if p_row.get("is_sick"):
+        score += 50
+    return score
+
 def normalize_plant_payload(plant):
     """Detay ekrani icin eksik alanlari tamamlar."""
     if not isinstance(plant, dict):
@@ -339,14 +358,15 @@ st.markdown("<h1 style='text-align: center; color: #4A2C2A; margin-top: 0;'>🌸
 # Bildirim Kontrolü (Gelişmiş Blink Sistemi)
 has_plant_alert = False
 my_plants = []
+plant_index = get_plant_index()
 if db_ready:
     my_plants = safe_get_my_garden()
 for p_row in my_plants:
-    plant_data = next((p for p in PLANTS if p["id"] == p_row["plant_id"]), None)
+    plant_data = plant_index.get(str(p_row["plant_id"]))
     if plant_data:
         last_w = safe_date_from_value(p_row["last_watered"])
         days_since = (datetime.date.today() - last_w).days
-        water_period = 7 if plant_data["water_level"] == 2 else 14 if plant_data["water_level"] == 1 else 3
+        water_period = get_watering_period_days(plant_data)
         if days_since >= water_period or p_row["is_sick"]:
             has_plant_alert = True
             break
@@ -357,6 +377,26 @@ try:
 except Exception:
     ai_findings = {"data": []}
 has_ai_insight = len(ai_findings.get("data", [])) > 0
+
+# Üst özet metrikler
+thirsty_count = 0
+sick_count = 0
+for p_row in my_plants:
+    plant_data = plant_index.get(str(p_row["plant_id"]))
+    if not plant_data:
+        continue
+    water_period = get_watering_period_days(plant_data)
+    last_w = safe_date_from_value(p_row["last_watered"])
+    days_since = (datetime.date.today() - last_w).days
+    if days_since >= water_period:
+        thirsty_count += 1
+    if p_row.get("is_sick"):
+        sick_count += 1
+
+mc1, mc2, mc3 = st.columns(3)
+mc1.metric("Toplam Bitki", len(my_plants))
+mc2.metric("Susuz Bitki", thirsty_count)
+mc3.metric("Tedavide", sick_count)
 
 # Dinamik CSS Injection
 blink_css = "<style>"
@@ -772,12 +812,12 @@ elif app_mode == "bildirim":
     else:
         cols = st.columns(2)
         for idx, p_row in enumerate(my_plants):
-            plant_data = next((p for p in PLANTS if p["id"] == p_row["plant_id"]), None)
+            plant_data = plant_index.get(str(p_row["plant_id"]))
             if plant_data:
                 with cols[idx % 2]:
                     last_w = safe_date_from_value(p_row["last_watered"])
                     days_since = (datetime.date.today() - last_w).days
-                    water_period = 7 if plant_data["water_level"] == 2 else 14 if plant_data["water_level"] == 1 else 3
+                    water_period = get_watering_period_days(plant_data)
                     
                     if days_since >= water_period:
                         st.warning(f"💧 **{p_row['nickname']}** ({plant_data['name']}) çok susamış! {days_since} gündür su bekliyor.")
@@ -915,8 +955,13 @@ elif app_mode == "kosem":
     if not my_garden:
         st.info("Yeşil köşeniz henüz boş. Kütüphaneden bitki ekleyerek burayı canlandırabilirsiniz!")
     else:
+        my_garden = sorted(
+            my_garden,
+            key=lambda row: calculate_urgency_score(row, plant_index.get(str(row["plant_id"]))),
+            reverse=True
+        )
         for p_row in my_garden:
-            plant_data = next((p for p in PLANTS if p["id"] == p_row["plant_id"]), None)
+            plant_data = plant_index.get(str(p_row["plant_id"]))
             if plant_data:
                 with st.expander(f"🌿 {p_row['nickname']} ({plant_data['name']})", expanded=True):
                     c1, c2, c3 = st.columns([1, 2, 1])
