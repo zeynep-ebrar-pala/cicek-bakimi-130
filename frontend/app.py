@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import datetime
 import random
 import os
@@ -137,6 +136,10 @@ def normalize_text(value):
     txt = re.sub(r"[^a-z0-9\s]", " ", txt)
     txt = re.sub(r"\s+", " ", txt).strip()
     return txt
+
+@st.cache_data(show_spinner=False)
+def cached_image_base64(path):
+    return get_image_base64(path)
 
 def _to_data_uri(uploaded_file):
     if not uploaded_file:
@@ -828,7 +831,7 @@ elif app_mode == "rehber":
             cols = st.columns(3) # 4 yerine 3 kolon daha ferah ve kullanıcı dostu durur
             for idx, plant in enumerate(filtered_plants):
                 with cols[idx % 3]:
-                    img_src = get_image_base64(plant['image'])
+                    img_src = cached_image_base64(plant['image'])
                     st.markdown(f"""
                         <div class="plant-card">
                             <div class="image-container">
@@ -853,7 +856,7 @@ elif app_mode == "rehber":
         col_img, col_info, col_action = st.columns([1.2, 1.5, 1])
         with col_img:
             # Stabil mod default: beyaz ekran riskini azaltmak icin guvenli gorsel render.
-            img_base64 = optimize_data_uri_for_zoom(get_image_base64(plant.get("image", "")))
+            img_base64 = optimize_data_uri_for_zoom(cached_image_base64(plant.get("image", "")))
             st.image(img_base64, use_container_width=True)
             st.info(plant.get("summary", "Ozet bilgi bulunamadi."))
 
@@ -908,7 +911,7 @@ elif app_mode == "kosem":
                 with st.expander(f"🌿 {p_row['nickname']} ({plant_data['name']})", expanded=True):
                     c1, c2, c3 = st.columns([1, 2, 1])
                     with c1:
-                        img_src = get_image_base64(plant_data["image"])
+                        img_src = cached_image_base64(plant_data["image"])
                         st.image(img_src, use_container_width=True)
                     
                     with c2:
