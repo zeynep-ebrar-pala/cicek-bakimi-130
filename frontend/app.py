@@ -141,6 +141,24 @@ def normalize_text(value):
 def cached_image_base64(path):
     return get_image_base64(path)
 
+@st.cache_data(show_spinner=False)
+def cached_image_source(path):
+    if not path:
+        return "https://via.placeholder.com/400x300?text=Resim+Yok"
+    if str(path).startswith("http"):
+        return path
+    if os.path.exists(path):
+        return path
+    root_dir = Path(__file__).parent.parent
+    candidates = [
+        root_dir / "assets" / str(path),
+        root_dir / "frontend" / "assets" / str(path),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return "https://via.placeholder.com/400x300?text=Resim+Yok"
+
 def _to_data_uri(uploaded_file):
     if not uploaded_file:
         return ""
@@ -831,17 +849,9 @@ elif app_mode == "rehber":
             cols = st.columns(3) # 4 yerine 3 kolon daha ferah ve kullanıcı dostu durur
             for idx, plant in enumerate(filtered_plants):
                 with cols[idx % 3]:
-                    img_src = cached_image_base64(plant['image'])
-                    st.markdown(f"""
-                        <div class="plant-card">
-                            <div class="image-container">
-                                <img src="{img_src}" class="plant-image">
-                            </div>
-                            <div style="padding: 10px 0;">
-                                <span class="plant-name">{plant['name']}</span>
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    img_src = cached_image_source(plant.get("image", ""))
+                    st.image(img_src, use_container_width=True)
+                    st.markdown(f"**{plant['name']}**")
                     if st.button(f"İncele", key=f"btn_{plant['id']}", use_container_width=True):
                         navigate_to("detail", plant)
 
@@ -856,8 +866,8 @@ elif app_mode == "rehber":
         col_img, col_info, col_action = st.columns([1.2, 1.5, 1])
         with col_img:
             # Stabil mod default: beyaz ekran riskini azaltmak icin guvenli gorsel render.
-            img_base64 = optimize_data_uri_for_zoom(cached_image_base64(plant.get("image", "")))
-            st.image(img_base64, use_container_width=True)
+            img_source = optimize_data_uri_for_zoom(cached_image_source(plant.get("image", "")))
+            st.image(img_source, use_container_width=True)
             st.info(plant.get("summary", "Ozet bilgi bulunamadi."))
 
         with col_info:
@@ -911,7 +921,7 @@ elif app_mode == "kosem":
                 with st.expander(f"🌿 {p_row['nickname']} ({plant_data['name']})", expanded=True):
                     c1, c2, c3 = st.columns([1, 2, 1])
                     with c1:
-                        img_src = cached_image_base64(plant_data["image"])
+                        img_src = cached_image_source(plant_data.get("image", ""))
                         st.image(img_src, use_container_width=True)
                     
                     with c2:
