@@ -1,4 +1,2 @@
-"""Default Streamlit Cloud entrypoint."""
-
-from app import *  # noqa: F401,F403
-
+"""Streamlit Cloud Entry Point Redirect"""
+import app

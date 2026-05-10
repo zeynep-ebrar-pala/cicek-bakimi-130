@@ -1,26 +1,33 @@
 import streamlit as st
-import base64
-import os
 
 def inject_garland():
-    # Yerel custom_flower.png dosyasını yükle (Kök assets klasöründen)
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    img_path = os.path.join(root_dir, "assets", "custom_flower.png")
-    img_url = ""
+    """Enjekte edilen premium çiçek sarmaşığı (Saf CSS sürümü)."""
+    # Premium SVG Garland Data URI
+    svg_garland = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(50,50)'%3E%3Cpath fill='%23FF8B71' opacity='0.8' d='M0,-20 Q10,-35 20,-20 Q30,-5 0,0 Q-30,-5 -20,-20 Q-10,-35 0,-20 Z' transform='rotate(0)'/%3E%3Cpath fill='%23FF8B71' opacity='0.8' d='M0,-20 Q10,-35 20,-20 Q30,-5 0,0 Q-30,-5 -20,-20 Q-10,-35 0,-20 Z' transform='rotate(72)'/%3E%3Cpath fill='%23FF8B71' opacity='0.8' d='M0,-20 Q10,-35 20,-20 Q30,-5 0,0 Q-30,-5 -20,-20 Q-10,-35 0,-20 Z' transform='rotate(144)'/%3E%3Cpath fill='%23FF8B71' opacity='0.8' d='M0,-20 Q10,-35 20,-20 Q30,-5 0,0 Q-30,-5 -20,-20 Q-10,-35 0,-20 Z' transform='rotate(216)'/%3E%3Cpath fill='%23FF8B71' opacity='0.8' d='M0,-20 Q10,-35 20,-20 Q30,-5 0,0 Q-30,-5 -20,-20 Q-10,-35 0,-20 Z' transform='rotate(288)'/%3E%3Ccircle fill='%23FFD700' r='5'/%3E%3C/g%3E%3C/svg%3E"
     
-    if os.path.exists(img_path):
-        with open(img_path, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode()
-            img_url = f"data:image/png;base64,{encoded}"
-    else:
-        # Fallback
-        img_url = "https://www.transparentpng.com/download/pink-flowers/pink-flowers-png-8.png"
-
     css_content = f"""<style>
-.garland-container {{position: fixed;top: 0;left: 0;width: 100%;height: 80px;background-image: url('{img_url}');background-repeat: repeat-x;background-size: contain;z-index: 999999;pointer-events: none;animation: garlandSway 6s infinite ease-in-out;filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1));transform-origin: top center;}}
-@keyframes garlandSway {{0%, 100% {{ transform: translateY(0) rotate(0deg); }} 25% {{ transform: translateY(5px) rotate(1deg); }} 50% {{ transform: translateY(8px) rotate(0deg); }} 75% {{ transform: translateY(5px) rotate(-1deg); }}}}
-.main .block-container {{padding-top: 100px !important;}}
-[data-testid="stHeader"] {{background: transparent !important;}}
-</style>
-<div class="garland-container"></div>"""
+    .stApp::before {{
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 80px;
+        background-image: url("{svg_garland}");
+        background-repeat: repeat-x;
+        background-size: 80px 80px;
+        z-index: 1001;
+        pointer-events: none;
+        animation: garlandSway 10s infinite ease-in-out;
+        filter: drop-shadow(0 5px 15px rgba(0,0,0,0.05));
+        opacity: 0.85;
+    }}
+    @keyframes garlandSway {{
+        0%, 100% {{ transform: translateY(0) rotate(0deg); }}
+        50% {{ transform: translateY(5px) rotate(0.5deg); }}
+    }}
+    .main .block-container {{
+        padding-top: 100px !important;
+    }}
+    </style>"""
     st.markdown(css_content, unsafe_allow_html=True)
