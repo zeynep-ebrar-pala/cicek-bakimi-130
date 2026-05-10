@@ -63,7 +63,7 @@ def render_app():
             padding-bottom: 1rem !important;
         }
         
-        [data-testid="stHeader"] { visibility: hidden; }
+        [data-testid="stHeader"] { background: transparent; }
         footer { visibility: hidden; }
         #MainMenu { visibility: hidden; }
 
