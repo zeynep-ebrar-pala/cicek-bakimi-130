@@ -77,10 +77,20 @@ def render_app():
         
         .motto {
             text-align: center;
-            color: var(--secondary);
+            color: var(--primary);
             font-style: italic;
             margin-bottom: 10px;
             font-weight: 300;
+        }
+
+        .metric-pill {
+            font-weight: 700;
+            color: var(--text-color);
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         /* Glassmorphism Card System */
@@ -142,12 +152,13 @@ def render_app():
         .stat-box {
             text-align: center;
             padding: 15px;
-            background: white;
+            background: var(--glass);
+            backdrop-filter: blur(5px);
             border-radius: 15px;
             border: 1px solid var(--glass-border);
         }
         .stat-val { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
-        .stat-lbl { font-size: 0.8rem; color: #666; text-transform: uppercase; }
+        .stat-lbl { font-size: 0.8rem; color: var(--text-color); opacity: 0.8; text-transform: uppercase; }
 
         /* Animation */
         @keyframes fadeIn {
@@ -222,7 +233,7 @@ def render_app():
 
         if st.session_state.app_mode == "rehber":
             st.markdown("""
-            <div class='fade-in' style='text-align: center; color: #444; margin-bottom: 25px; font-size: 1rem; font-weight: 300;'>
+            <div class='fade-in' style='text-align: center; color: var(--text-color); margin-bottom: 25px; font-size: 1rem; font-weight: 400; opacity: 0.9;'>
                 Doğanın nabzını tutan akıllı asistanınızla, filizlerinizin mutluluğuna ortak olun. 
                 Bilimsel bakım stratejileri, ileri seviye hastalık teşhisi ve yapay zekanın 
                 bilgeliğiyle evinizdeki her yaprağın hikayesini birlikte yazıyoruz.
@@ -571,7 +582,7 @@ def render_app():
         # 7. PREMIUM FOOTER
         st.markdown("---")
         st.markdown("""
-        <div style='text-align: center; color: #666; font-size: 0.9rem; padding: 20px;'>
+        <div style='text-align: center; color: var(--text-color); opacity: 0.7; font-size: 0.9rem; padding: 20px;'>
             <b>Nabzı Filiz</b> | Akıllı Bitki Yönetim Sistemi<br>
             <b>Zeynep Ebrar Pala</b> tarafından geliştirilmiştir<br>
             <span style='font-size: 0.7rem;'>© 2026 Tüm Hakları Saklıdır.</span>
