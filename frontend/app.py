@@ -271,37 +271,51 @@ def render_app():
                 # NEW: Bitkimi Tanı Feature
                 with st.expander("📸 Bitkimi Tanı (Görsel Analiz)"):
                     st.write("Bitkinizin fotoğrafını yükleyin, kütüphanemizdeki 36 türle karşılaştıralım.")
-                    up_file = st.file_uploader("Fotoğraf Seç...", type=["jpg", "png", "jpeg"], key="recognizer")
+                    up_file = st.file_uploader("Bitki Fotoğrafı Yükle 📸", type=["jpg", "png", "jpeg"], key="recognizer")
                     if up_file:
                         st.image(up_file, width=200)
-                        if st.button("Tanımla ✨", use_container_width=True):
+                        if st.button("Bitkiyi Tanımla ✨", use_container_width=True):
                             with st.spinner("Bitki türü analiz ediliyor..."):
-                                # High-precision matching logic (keyword + filename similarity)
-                                fname = up_file.name.lower()
-                                best_match = None
-                                highest_score = 0
-                                
-                                for p in PLANTS:
-                                    score = 0
-                                    # Check filename match
-                                    if p["id"].replace("_", " ") in fname or p["name"].lower() in fname:
-                                        score += 5
-                                    # Keyword check (using summary and name)
-                                    keywords = p["name"].lower().split() + p["summary"].lower().split()
-                                    for k in keywords:
-                                        if len(k) > 3 and k in fname: score += 1
+                                try:
+                                    fname = up_file.name.lower()
+                                    best_match = None
+                                    highest_score = 0
                                     
-                                    if score > highest_score:
-                                        highest_score = score
-                                        best_match = p
-                                
-                                if best_match and highest_score > 0:
-                                    st.success(f"🌟 Bu bitki büyük ihtimalle bir **{best_match['name']}**!")
-                                    if st.button(f"{best_match['name']} Detaylarını Gör", use_container_width=True):
-                                        st.session_state.selected_plant = best_match; st.session_state.view = "detail"; st.rerun()
-                                else:
-                                    st.warning("⚠️ Bu bitkiyi tam olarak tanıyamadık.")
-                                    st.info("İpucu: Bitkiniz henüz kütüphanemizde olmayabilir. Lütfen bitki rehberimizde mevcut olan diğer türlere göz gezdirin.")
+                                    for p in PLANTS:
+                                        score = 0
+                                        p_name = p["name"].lower()
+                                        p_id_str = str(p["id"])
+                                        p_img = p.get("image", "").lower()
+                                        p_keys = p.get("keywords", [])
+                                        
+                                        # 1. Filename match
+                                        if p_name in fname or p_img in fname:
+                                            score += 10
+                                        
+                                        # 2. Keyword match
+                                        for k in p_keys:
+                                            if k.lower() in fname:
+                                                score += 5
+                                        
+                                        # 3. Fuzzy summary match
+                                        summary_words = p["summary"].lower().split()
+                                        for sw in summary_words:
+                                            if len(sw) > 4 and sw in fname:
+                                                score += 1
+                                        
+                                        if score > highest_score:
+                                            highest_score = score
+                                            best_match = p
+                                    
+                                    if best_match and highest_score > 0:
+                                        st.success(f"🌟 Bu bitki büyük ihtimalle bir **{best_match['name']}**!")
+                                        if st.button(f"{best_match['name']} Detaylarını Gör", use_container_width=True):
+                                            st.session_state.selected_plant = best_match; st.session_state.view = "detail"; st.rerun()
+                                    else:
+                                        st.warning("⚠️ Bu bitkiyi tam olarak tanıyamadık.")
+                                        st.info("İpucu: Bitkiniz henüz kütüphanemizde olmayabilir. Lütfen bitki rehberimizde mevcut olan diğer türlere göz gezdirin.")
+                                except Exception as inner_e:
+                                    st.error(f"Analiz sırasında bir hata oluştu: {inner_e}")
                 
                 st.markdown("## 🔎 Filtreleme Paneli")
                 f1, f2, f3 = st.columns(3)
