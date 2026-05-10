@@ -64,8 +64,6 @@ def render_app():
         }
         
         [data-testid="stHeader"] { background: transparent; }
-        footer { visibility: hidden; }
-        #MainMenu { visibility: hidden; }
 
         .brand { 
             font-family: 'Playfair Display', serif; 
