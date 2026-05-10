@@ -230,7 +230,7 @@ def render_app():
         # 7. MAIN LOGIC
         if st.session_state.app_mode == "rehber":
             if st.session_state.view == "home":
-                st.markdown("### ✨ Günün Bitkisi")
+                st.markdown("### 🌟 Günün Bitkisi")
                 daily_id = get_daily_plant_id()
                 daily_p = next((p for p in PLANTS if p["id"] == daily_id), PLANTS[0])
                 with st.container(border=True):
@@ -255,7 +255,7 @@ def render_app():
                             st.session_state.selected_plant = daily_p; st.session_state.view = "detail"; st.rerun()
                 
                 # NEW: Bitkimi Tanı Feature
-                with st.expander("🔍 Bitkimi Tanı (Görsel Analiz)"):
+                with st.expander("📸 Bitkimi Tanı (Görsel Analiz)"):
                     st.write("Bitkinizin fotoğrafını yükleyin, kütüphanemizdeki 36 türle karşılaştıralım.")
                     up_file = st.file_uploader("Fotoğraf Seç...", type=["jpg", "png", "jpeg"], key="recognizer")
                     if up_file:
@@ -289,7 +289,7 @@ def render_app():
                                     st.warning("⚠️ Bu bitkiyi tam olarak tanıyamadık.")
                                     st.info("İpucu: Bitkiniz henüz kütüphanemizde olmayabilir. Lütfen bitki rehberimizde mevcut olan diğer türlere göz gezdirin.")
                 
-                st.markdown("## 🔍 Hızlı Bul & Filtrele")
+                st.markdown("## 🔎 Filtreleme Paneli")
                 f1, f2, f3 = st.columns(3)
                 search = f1.text_input("İsimle Ara", placeholder="Örn: Paşa Kılıcı")
                 f_water = f2.selectbox("Su İhtiyacı", ["Hepsi", "Az", "Orta", "Çok"])
