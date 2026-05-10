@@ -58,6 +58,25 @@ streamlit run app.py
 
 ---
 
+## 📂 Proje Yapısı / Project Structure
+```text
+cicek-bakimi-130/
+├── assets/             # Görsel varlıklar ve bitki fotoğrafları
+├── backend/            # Veritabanı, AI Agent ve veri katmanı
+│   ├── agent.py        # Flora AI Agent mantığı
+│   ├── data.py         # Bitki ve hastalık veritabanı
+│   └── database.py     # SQLite işlemleri
+├── frontend/           # Kullanıcı arayüzü bileşenleri
+│   ├── app.py          # Ana uygulama arayüzü
+│   ├── decorations.py  # Görsel dekorasyonlar
+│   └── style.css       # Premium Glassmorphism stilleri
+├── app.py              # Uygulama giriş noktası
+├── streamlit_app.py    # Streamlit Cloud yönlendirme dosyası
+└── requirements.txt    # Kütüphane bağımlılıkları
+```
+
+---
+
 ## 👩‍💻 Geliştirici / Developer
 Bu proje **Zeynep Ebrar Pala** tarafından geliştirilmiştir.  
 This project was developed by **Zeynep Ebrar Pala**.
