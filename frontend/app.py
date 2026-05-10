@@ -195,6 +195,18 @@ def render_app():
         .zoom-container:hover img {
             transform: scale(1.4);
         }
+
+        /* Thicker Expander Bar */
+        div[data-testid="stExpander"] p {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            color: var(--primary) !important;
+        }
+        div[data-testid="stExpander"] {
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 15px !important;
+            background: var(--glass) !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -230,6 +242,7 @@ def render_app():
         # 7. MAIN LOGIC
         if st.session_state.app_mode == "rehber":
             if st.session_state.view == "home":
+                st.markdown("<div style='margin-top: -20px;'></div>", unsafe_allow_html=True)
                 st.markdown("### 🌟 Günün Bitkisi")
                 daily_id = get_daily_plant_id()
                 daily_p = next((p for p in PLANTS if p["id"] == daily_id), PLANTS[0])
