@@ -61,6 +61,50 @@ class BotanicaAgent:
         except Exception as e:
             return f"Groq hatası: Lütfen API anahtarınızın doğru olduğundan emin olun."
 
+    def identify_plant_vision(self, image_bytes, mime_type="image/jpeg"):
+        """Gemini Vision ile bitkiyi fotoğraftan tanımlar."""
+        if not self.api_key:
+            return None
+            
+        import base64
+        img_b64 = base64.b64encode(image_bytes).decode()
+        
+        # Kütüphanedeki bitki isimleri
+        plant_names = [p["name"] for p in PLANTS]
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+        headers = {'Content-Type': 'application/json'}
+        
+        prompt = f"""
+        Sen bir botanik uzmanısın. Bu resimdeki bitkiyi tanımla. 
+        Sadece şu listedeki isimlerden birini söyle: {', '.join(plant_names)}.
+        Eğer bitki listedeki hiçbir türe benzemiyorsa 'Unknown' de.
+        Sadece bitki ismini yaz, başka açıklama yapma.
+        """
+        
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": mime_type,
+                            "data": img_b64
+                        }
+                    }
+                ]
+            }]
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=20)
+            result = response.json()
+            if 'candidates' in result:
+                return result['candidates'][0]['content']['parts'][0]['text'].strip()
+            return None
+        except Exception:
+            return None
+
     def process_command(self, user_input):
         """AI desteğiyle komutu işler."""
         if self.groq_key:

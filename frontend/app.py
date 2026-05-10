@@ -275,41 +275,42 @@ def render_app():
                     if up_file:
                         st.image(up_file, width=200)
                         if st.button("Bitkiyi Tanımla ✨", use_container_width=True):
-                            with st.spinner("Bitki türü analiz ediliyor..."):
+                            with st.spinner("Yapay zeka fotoğrafı analiz ediyor..."):
                                 try:
-                                    fname = up_file.name.lower()
                                     best_match = None
-                                    highest_score = 0
                                     
-                                    for p in PLANTS:
-                                        score = 0
-                                        p_name = p["name"].lower()
-                                        p_id_str = str(p["id"])
-                                        p_img = p.get("image", "").lower()
-                                        p_keys = p.get("keywords", [])
-                                        
-                                        # 1. Filename match
-                                        if p_name in fname or p_img in fname:
-                                            score += 10
-                                        
-                                        # 2. Keyword match
-                                        for k in p_keys:
-                                            if k.lower() in fname:
-                                                score += 5
-                                        
-                                        # 3. Fuzzy summary match
-                                        summary_words = p["summary"].lower().split()
-                                        for sw in summary_words:
-                                            if len(sw) > 4 and sw in fname:
-                                                score += 1
-                                        
-                                        if score > highest_score:
-                                            highest_score = score
-                                            best_match = p
+                                    # 1. High-Capability AI Vision (Gemini)
+                                    if profile and profile.get('api_key'):
+                                        from agent import BotanicaAgent
+                                        agent = BotanicaAgent(api_key=profile['api_key'])
+                                        ai_result = agent.identify_plant_vision(up_file.getvalue(), up_file.type)
+                                        if ai_result and ai_result != "Unknown":
+                                            best_match = next((p for p in PLANTS if p["name"].lower() in ai_result.lower()), None)
                                     
-                                    if best_match and highest_score > 0:
-                                        st.success(f"🌟 Bu bitki büyük ihtimalle bir **{best_match['name']}**!")
-                                        if st.button(f"{best_match['name']} Detaylarını Gör", use_container_width=True):
+                                    # 2. Fallback: Robust Keyword/Filename Matching
+                                    if not best_match:
+                                        fname = up_file.name.lower()
+                                        highest_score = 0
+                                        for p in PLANTS:
+                                            score = 0
+                                            p_name = p["name"].lower()
+                                            p_img = p.get("image", "").lower()
+                                            p_keys = p.get("keywords", [])
+                                            
+                                            # String-safe checks
+                                            if p_name in fname or p_img in fname: score += 10
+                                            for k in p_keys:
+                                                if str(k).lower() in fname: score += 5
+                                            
+                                            if score > highest_score:
+                                                highest_score = score
+                                                best_match = p
+                                        
+                                        if highest_score == 0: best_match = None
+
+                                    if best_match:
+                                        st.success(f"🌟 Yapay zeka bu bitkiyi **{best_match['name']}** olarak tanımladı!")
+                                        if st.button(f"{best_match['name']} Detaylarını Gör", key="view_matched_plant", use_container_width=True):
                                             st.session_state.selected_plant = best_match; st.session_state.view = "detail"; st.rerun()
                                     else:
                                         st.warning("⚠️ Bu bitkiyi tam olarak tanıyamadık.")
