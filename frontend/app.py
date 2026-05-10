@@ -178,13 +178,21 @@ def render_app():
             cursor: zoom-in;
             border: 1px solid var(--glass-border);
             background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: auto;
+            max-height: 250px;
         }
         .zoom-container img {
-            transition: transform 0.5s ease;
+            transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
             width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         .zoom-container:hover img {
-            transform: scale(1.6);
+            transform: scale(1.4);
         }
     </style>
     """, unsafe_allow_html=True)
@@ -228,7 +236,15 @@ def render_app():
                     dc1, dc2, dc3 = st.columns([1, 2, 1])
                     with dc1:
                         img_p = ASSETS_DIR / daily_p.get("image", "")
-                        if img_p.exists(): st.image(str(img_p), width=100)
+                        if img_p.exists():
+                            with open(img_p, "rb") as f:
+                                img_b64 = base64.b64encode(f.read()).decode()
+                            st.markdown(f"""
+                            <div class='zoom-container' style='max-height: 120px;'>
+                                <img src='data:image/jpeg;base64,{img_b64}'>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else: st.write("🌿")
                     with dc2:
                         st.subheader(daily_p["name"])
                         st.caption(daily_p.get("summary", "Bitki hakkında kısa bilgi..."))
@@ -487,7 +503,7 @@ def render_app():
         st.markdown("""
         <div style='text-align: center; color: #666; font-size: 0.9rem; padding: 20px;'>
             <b>Nabzı Filiz</b> | Akıllı Bitki Yönetim Sistemi<br>
-            Developed with ❤️ by <b>Zeynep Ebrar Pala</b><br>
+            <b>Zeynep Ebrar Pala</b> tarafından geliştirilmiştir<br>
             <span style='font-size: 0.7rem;'>© 2026 Tüm Hakları Saklıdır.</span>
         </div>
         """, unsafe_allow_html=True)
