@@ -59,18 +59,21 @@ def render_app():
         }
 
         [data-testid="block-container"] {
-            padding-top: 1.5rem !important;
+            padding-top: 0 !important;
             padding-bottom: 1rem !important;
         }
         
-        [data-testid="stHeader"] { background: transparent; }
+        [data-testid="stHeader"] { 
+            display: none !important;
+            height: 0 !important;
+        }
 
         .brand { 
             font-family: 'Playfair Display', serif; 
             font-size: 4rem; 
             color: var(--primary); 
             text-align: center; 
-            margin-top: -80px;
+            margin-top: -110px;
             margin-bottom: -15px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
         }
