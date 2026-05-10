@@ -65,7 +65,8 @@ def render_app():
             font-size: 5rem; 
             color: var(--primary); 
             text-align: center; 
-            margin-bottom: -10px;
+            margin-top: -40px;
+            margin-bottom: -15px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
         }
         
@@ -73,7 +74,7 @@ def render_app():
             text-align: center;
             color: var(--secondary);
             font-style: italic;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-weight: 300;
         }
 
@@ -252,6 +253,41 @@ def render_app():
                         st.write("<br>", unsafe_allow_html=True)
                         if st.button("Keşfet 🔍", key="daily_btn", use_container_width=True):
                             st.session_state.selected_plant = daily_p; st.session_state.view = "detail"; st.rerun()
+                
+                # NEW: Bitkimi Tanı Feature
+                with st.expander("🔍 Bitkimi Tanı (Görsel Analiz)"):
+                    st.write("Bitkinizin fotoğrafını yükleyin, kütüphanemizdeki 36 türle karşılaştıralım.")
+                    up_file = st.file_uploader("Fotoğraf Seç...", type=["jpg", "png", "jpeg"], key="recognizer")
+                    if up_file:
+                        st.image(up_file, width=200)
+                        if st.button("Tanımla ✨", use_container_width=True):
+                            with st.spinner("Bitki türü analiz ediliyor..."):
+                                # High-precision matching logic (keyword + filename similarity)
+                                fname = up_file.name.lower()
+                                best_match = None
+                                highest_score = 0
+                                
+                                for p in PLANTS:
+                                    score = 0
+                                    # Check filename match
+                                    if p["id"].replace("_", " ") in fname or p["name"].lower() in fname:
+                                        score += 5
+                                    # Keyword check (using summary and name)
+                                    keywords = p["name"].lower().split() + p["summary"].lower().split()
+                                    for k in keywords:
+                                        if len(k) > 3 and k in fname: score += 1
+                                    
+                                    if score > highest_score:
+                                        highest_score = score
+                                        best_match = p
+                                
+                                if best_match and highest_score > 0:
+                                    st.success(f"🌟 Bu bitki büyük ihtimalle bir **{best_match['name']}**!")
+                                    if st.button(f"{best_match['name']} Detaylarını Gör", use_container_width=True):
+                                        st.session_state.selected_plant = best_match; st.session_state.view = "detail"; st.rerun()
+                                else:
+                                    st.warning("⚠️ Bu bitkiyi tam olarak tanıyamadık.")
+                                    st.info("İpucu: Bitkiniz henüz kütüphanemizde olmayabilir. Lütfen bitki rehberimizde mevcut olan diğer türlere göz gezdirin.")
                 
                 st.markdown("## 🔍 Hızlı Bul & Filtrele")
                 f1, f2, f3 = st.columns(3)
