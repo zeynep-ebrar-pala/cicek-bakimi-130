@@ -218,8 +218,9 @@ def render_app():
         if st.session_state.app_mode == "rehber":
             st.markdown("""
             <div class='fade-in' style='text-align: center; color: #444; margin-bottom: 25px; font-size: 1rem; font-weight: 300;'>
-                Akıllı bitki asistanınız ile doğayı evinize taşıyın. 13 farklı hastalık teşhisi, 
-                uzman bakımı ve yapay zeka desteğiyle her zaman yanınızdayız.
+                Doğanın nabzını tutan akıllı asistanınızla, filizlerinizin mutluluğuna ortak olun. 
+                Bilimsel bakım stratejileri, ileri seviye hastalık teşhisi ve yapay zekanın 
+                bilgeliğiyle evinizdeki her yaprağın hikayesini birlikte yazıyoruz.
             </div>
             """, unsafe_allow_html=True)
 
