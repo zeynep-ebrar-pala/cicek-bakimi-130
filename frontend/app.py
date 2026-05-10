@@ -57,15 +57,20 @@ def render_app():
             background: linear-gradient(135deg, #f0f4f1 0%, #e8f0e9 100%);
             background-attachment: fixed;
         }
+
+        [data-testid="block-container"] {
+            padding-top: 1.5rem !important;
+            padding-bottom: 1rem !important;
+        }
         
         [data-testid="stHeader"] { background: transparent; }
 
         .brand { 
             font-family: 'Playfair Display', serif; 
-            font-size: 5rem; 
+            font-size: 4rem; 
             color: var(--primary); 
             text-align: center; 
-            margin-top: -40px;
+            margin-top: -80px;
             margin-bottom: -15px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
         }
@@ -74,7 +79,7 @@ def render_app():
             text-align: center;
             color: var(--secondary);
             font-style: italic;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             font-weight: 300;
         }
 
@@ -238,7 +243,7 @@ def render_app():
         if n6.button("⚙️ Profilim", use_container_width=True):
             st.session_state.app_mode = "profil"; st.rerun()
 
-        st.divider()
+        st.markdown("<hr style='margin: 10px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
 
         # 7. MAIN LOGIC
         if st.session_state.app_mode == "rehber":
